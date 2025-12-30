@@ -1,5 +1,5 @@
 [submodule "license-generator"]
 	path = extern/license-generator
-	url = https://github.com/open-license-manager/lcc-license-generator.git
+	url = https://github.com/zhin2929/lcc-license-generator.git
 	branch = .
 	ignore = all
