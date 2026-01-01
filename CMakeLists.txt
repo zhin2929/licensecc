@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6 FATAL_ERROR)
+﻿cmake_minimum_required(VERSION 3.6 FATAL_ERROR)
 
 SET(LICENSECC_SHORT_LICENSE "BSD Software License")
 
@@ -29,7 +29,7 @@ IF(NOT LCC_PROJECTS_BASE_DIR)
 ENDIF(NOT LCC_PROJECTS_BASE_DIR)
 
 cmake_policy(SET CMP0048 NEW)
-#cmake_policy(SET CMP0091 NEW)
+cmake_policy(SET CMP0091 NEW)
 project (licensecc 
 			VERSION 2.1.0
 			LANGUAGES CXX)
@@ -44,8 +44,27 @@ find_package(lccgen REQUIRED)
 
 #In case the build system doesn't support binfmt misc
 IF( ( CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" ) AND CMAKE_CROSSCOMPILING AND NOT DEFINED CMAKE_CROSSCOMPILING_EMULATOR )
-	SET(CMAKE_CROSSCOMPILING_EMULATOR "wine")	
+	SET(CMAKE_CROSSCOMPILING_EMULATOR "wine")
 ENDIF()
+
+# ===============================================================
+# 静态链接配置 - 默认启用，可通过 -DSTATIC_RUNTIME=OFF 覆盖
+# ===============================================================
+if(NOT DEFINED STATIC_RUNTIME)
+  set(STATIC_RUNTIME ON CACHE BOOL "Use static runtime libraries (/MT) and static linking" FORCE)
+  message(STATUS "STATIC_RUNTIME not defined, defaulting to ON (static linking)")
+else()
+  message(STATUS "STATIC_RUNTIME explicitly set to: ${STATIC_RUNTIME}")
+endif()
+
+# MSVC运行时库配置 - 使用CMake 3.15+的现代方式（全局生效，子项目自动继承）
+if(MSVC AND STATIC_RUNTIME)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library" FORCE)
+  message(STATUS "Using static CRT: /MT (Release) and /MTd (Debug)")
+elseif(MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library" FORCE)
+  message(STATUS "Using dynamic CRT: /MD (Release) and /MDd (Debug)")
+endif()
 
 SET (OPENSSL_USE_STATIC_LIBS TRUE)
 IF(${STATIC_RUNTIME})
@@ -96,17 +115,14 @@ else(UNIX)
 		include(target_arch)
 		target_architecture( TARGET_ARCHITECTURE )
 		message(STATUS "architecture detected: ${TARGET_ARCHITECTURE}")
-		#cmake > 3.15 handle the /MD flag more nicely than this
+
+		# CRT已在顶层通过CMAKE_MSVC_RUNTIME_LIBRARY统一配置，这里只需设置Boost匹配
 		if(STATIC_RUNTIME)
-		    message(STATUS "Static runtime ${STATIC_RUNTIME}")
-			string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-			string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-			#list(APPEND CMAKE_CXX_FLAGS_DEBUG "/MTd")
-			SET(Boost_USE_STATIC_RUNTIME ON)
+		  SET(Boost_USE_STATIC_RUNTIME ON)
 		else()
-		    message(STATUS "Dynamic runtime (default)")
-		    SET(Boost_USE_STATIC_RUNTIME OFF)
-		endif(STATIC_RUNTIME)
+		  SET(Boost_USE_STATIC_RUNTIME OFF)
+		endif()
+
 		add_definitions("/D _CRT_SECURE_NO_WARNINGS")
 	    list(APPEND EXTERNAL_LIBS "bcrypt" "crypt32" "ws2_32" "iphlpapi")
 	else(MSVC)
@@ -158,7 +174,63 @@ if(WIN32 AND "x${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" STREQUAL "x")
     endif()
 	    message(STATUS "Compiler architecture: ${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
 endif()
-SET( Boost_USE_STATIC_LIBS OFF )
+
+# ===============================================================
+# Boost 静态链接配置 - 根据 STATIC_RUNTIME 选项决定
+# ===============================================================
+if(STATIC_RUNTIME)
+  SET( Boost_USE_STATIC_LIBS ON )
+  message(STATUS "Using static Boost libraries (Boost_USE_STATIC_LIBS=ON)")
+
+  if(MSVC)
+    SET(Boost_USE_STATIC_RUNTIME ON)
+    message(STATUS "Boost configured to match static CRT (/MT)")
+  endif()
+else()
+  SET( Boost_USE_STATIC_LIBS OFF )
+  message(STATUS "Using dynamic Boost libraries (Boost_USE_STATIC_LIBS=OFF)")
+
+  if(MSVC)
+    SET(Boost_USE_STATIC_RUNTIME OFF)
+    message(STATUS "Boost configured to match dynamic CRT (/MD)")
+  endif()
+endif()
+
+# ===============================================================
+# vcpkg 路径推导 - 强制使用静态 triplet 的依赖库
+# ===============================================================
+if(MSVC AND STATIC_RUNTIME)
+  if(CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
+    get_filename_component(VCPKG_ROOT_TEMP "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
+    get_filename_component(VCPKG_ROOT_TEMP "${VCPKG_ROOT_TEMP}" DIRECTORY)
+    get_filename_component(VCPKG_ROOT_TEMP "${VCPKG_ROOT_TEMP}" DIRECTORY)
+
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+      set(VCPKG_TRIPLET_DIR "${VCPKG_ROOT_TEMP}/installed/x64-windows-static")
+    else()
+      set(VCPKG_TRIPLET_DIR "${VCPKG_ROOT_TEMP}/installed/x86-windows-static")
+    endif()
+
+    set(BOOST_ROOT "${VCPKG_TRIPLET_DIR}")
+    set(Boost_NO_SYSTEM_PATHS ON)
+    set(OPENSSL_ROOT_DIR "${VCPKG_TRIPLET_DIR}")
+
+    message(STATUS "Using static libraries from: ${VCPKG_TRIPLET_DIR}")
+  elseif(DEFINED ENV{VCPKG_ROOT})
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+      set(VCPKG_TRIPLET_DIR "$ENV{VCPKG_ROOT}/installed/x64-windows-static")
+    else()
+      set(VCPKG_TRIPLET_DIR "$ENV{VCPKG_ROOT}/installed/x86-windows-static")
+    endif()
+
+    set(BOOST_ROOT "${VCPKG_TRIPLET_DIR}")
+    set(Boost_NO_SYSTEM_PATHS ON)
+    set(OPENSSL_ROOT_DIR "${VCPKG_TRIPLET_DIR}")
+
+    message(STATUS "Using static libraries from VCPKG_ROOT env: ${VCPKG_TRIPLET_DIR}")
+  endif()
+endif()
+
 find_package(Boost COMPONENTS unit_test_framework system filesystem)
 #if boost is found enable tests
 IF(Boost_FOUND)
