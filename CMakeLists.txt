@@ -1,10 +1,15 @@
-﻿cmake_minimum_required(VERSION 3.6 FATAL_ERROR)
+﻿cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 SET(LICENSECC_SHORT_LICENSE "BSD Software License")
 
 # 设置 CMake 策略，使用新的 Boost 查找方式
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
+endif()
+
+# CMP0144: find_package 使用大写 <PACKAGENAME>_ROOT 变量
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 NEW)
 endif()
 
 SET(CMAKE_DISABLE_SOURCE_CHANGES OFF) #keys are generated in the source tree by default
@@ -211,7 +216,7 @@ if(MSVC AND STATIC_RUNTIME)
       set(VCPKG_TRIPLET_DIR "${VCPKG_ROOT_TEMP}/installed/x86-windows-static")
     endif()
 
-    set(BOOST_ROOT "${VCPKG_TRIPLET_DIR}")
+    set(Boost_ROOT "${VCPKG_TRIPLET_DIR}")
     set(Boost_NO_SYSTEM_PATHS ON)
     set(OPENSSL_ROOT_DIR "${VCPKG_TRIPLET_DIR}")
 
@@ -223,7 +228,7 @@ if(MSVC AND STATIC_RUNTIME)
       set(VCPKG_TRIPLET_DIR "$ENV{VCPKG_ROOT}/installed/x86-windows-static")
     endif()
 
-    set(BOOST_ROOT "${VCPKG_TRIPLET_DIR}")
+    set(Boost_ROOT "${VCPKG_TRIPLET_DIR}")
     set(Boost_NO_SYSTEM_PATHS ON)
     set(OPENSSL_ROOT_DIR "${VCPKG_TRIPLET_DIR}")
 
