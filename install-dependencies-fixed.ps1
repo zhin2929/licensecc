@@ -111,8 +111,11 @@ $packages = @(
   # OpenSSL（主项目和子项目都需要）
   "openssl:x64-windows",
   "openssl:x86-windows",
+  "openssl:x64-windows-static",
+  "openssl:x86-windows-static",
 
   # Boost（license-generator 子项目需要）
+  # 动态版本（用于单独构建 licensecc）
   "boost-date-time:x64-windows",
   "boost-date-time:x86-windows",
   "boost-filesystem:x64-windows",
@@ -122,7 +125,19 @@ $packages = @(
   "boost-system:x64-windows",
   "boost-system:x86-windows",
   "boost-test:x64-windows",
-  "boost-test:x86-windows"
+  "boost-test:x86-windows",
+
+  # 静态版本（用于作为子项目集成，避免 DLL 依赖问题）
+  "boost-date-time:x64-windows-static",
+  "boost-date-time:x86-windows-static",
+  "boost-filesystem:x64-windows-static",
+  "boost-filesystem:x86-windows-static",
+  "boost-program-options:x64-windows-static",
+  "boost-program-options:x86-windows-static",
+  "boost-system:x64-windows-static",
+  "boost-system:x86-windows-static",
+  "boost-test:x64-windows-static",
+  "boost-test:x86-windows-static"
 )
 
 Write-Host "将要安装以下包:" -ForegroundColor Yellow
