@@ -43,14 +43,18 @@ else()
   message(STATUS "STATIC_RUNTIME explicitly set to: ${STATIC_RUNTIME}")
 endif()
 
-# MSVC运行时库配置 - 必须在 project() 之前设置（CMake 3.15+）
-# 注意：在 project() 之前，直接设置变量（MSVC 编译器会自动使用）
-if(STATIC_RUNTIME)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library" FORCE)
-  message(STATUS "Configuring for static CRT: /MT (Release) and /MTd (Debug)")
+# MSVC运行时库配置 - 已由父项目统一配置，此处不再覆盖
+# 如果是独立编译（没有父项目设置），则使用默认配置
+if(NOT CMAKE_MSVC_RUNTIME_LIBRARY)
+  if(STATIC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library" FORCE)
+    message(STATUS "Configuring for static CRT: /MT (Release) and /MTd (Debug)")
+  else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library" FORCE)
+    message(STATUS "Configuring for dynamic CRT: /MD (Release) and /MDd (Debug)")
+  endif()
 else()
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>" CACHE STRING "MSVC runtime library" FORCE)
-  message(STATUS "Configuring for dynamic CRT: /MD (Release) and /MDd (Debug)")
+  message(STATUS "Using parent project's MSVC runtime library: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
 endif()
 
 cmake_policy(SET CMP0048 NEW)
