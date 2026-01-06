@@ -79,17 +79,25 @@ endif()
 
 set(LCC_TEMP_INCLUDE_DIR "${LCC_PROJECTS_BASE_DIR}/${LCC_PROJECT_NAME}/include/${PROJECT_NAME}/${LCC_PROJECT_NAME}")
 set(LCC_TEMP_PUBLIC_KEY "${LCC_TEMP_INCLUDE_DIR}/public_key.h")
+set(LCC_TEMP_PRIVATE_KEY "${LCC_PROJECTS_BASE_DIR}/${LCC_PROJECT_NAME}/private_key.rsa")
 
 # 根据密钥存在性决定是否需要 lccgen
-if(EXISTS "${LCC_TEMP_PUBLIC_KEY}")
-  message(STATUS "检测到现有密钥，跳过 lccgen 查找")
+if(EXISTS "${LCC_TEMP_PUBLIC_KEY}" AND EXISTS "${LCC_TEMP_PRIVATE_KEY}")
+  message(STATUS "检测到完整密钥对，跳过 lccgen 查找")
   set(NEED_LCCGEN FALSE)
   # 创建虚拟 lccgen target
   if(NOT TARGET lccgen)
     add_executable(lccgen IMPORTED)
   endif()
 else()
-  message(STATUS "未检测到密钥，需要 lccgen")
+  # 缺少完整的密钥对
+  if(NOT EXISTS "${LCC_TEMP_PUBLIC_KEY}")
+    message(STATUS "未检测到公钥文件: ${LCC_TEMP_PUBLIC_KEY}")
+  endif()
+  if(NOT EXISTS "${LCC_TEMP_PRIVATE_KEY}")
+    message(STATUS "未检测到私钥文件: ${LCC_TEMP_PRIVATE_KEY}")
+  endif()
+  message(STATUS "密钥对不完整，需要 lccgen")
   set(NEED_LCCGEN TRUE)
 
   # 判断是否为顶层项目（单独编译）
@@ -221,22 +229,31 @@ set(LCC_PROJECT_PUBLIC_KEY "${LCC_INCLUDE_DIR}/public_key.h" )
 set(LCC_PROJECT_PRIVATE_KEY "${LCC_PROJECTS_BASE_DIR}/${LCC_PROJECT_NAME}/private_key.rsa" )
 
 # 检查密钥是否已存在
-if(EXISTS "${LCC_PROJECT_PUBLIC_KEY}")
-  # 密钥已存在：跳过 lccgen，不需要项目初始化
-  message(STATUS "密钥已存在: ${LCC_PROJECT_PUBLIC_KEY}")
+if(EXISTS "${LCC_PROJECT_PUBLIC_KEY}" AND EXISTS "${LCC_PROJECT_PRIVATE_KEY}")
+  # 密钥对完整：跳过 lccgen，不需要项目初始化
+  message(STATUS "检测到完整密钥对")
+  message(STATUS "  公钥: ${LCC_PROJECT_PUBLIC_KEY}")
+  message(STATUS "  私钥: ${LCC_PROJECT_PRIVATE_KEY}")
   message(STATUS "跳过 lccgen 和项目初始化")
 
   # 创建虚拟 target（避免依赖错误）
   add_custom_target(project_initialize
-    COMMENT "密钥已存在，跳过项目初始化"
+    COMMENT "密钥对完整，跳过项目初始化"
   )
 
   # 不需要查找 lccgen
   set(NEED_LCCGEN FALSE)
 
 else()
-  # 密钥不存在：需要 lccgen 生成
-  message(STATUS "密钥不存在: ${LCC_PROJECT_PUBLIC_KEY}")
+  # 密钥对不完整：需要 lccgen 生成
+  if(NOT EXISTS "${LCC_PROJECT_PUBLIC_KEY}")
+    message(WARNING "缺少公钥文件: ${LCC_PROJECT_PUBLIC_KEY}")
+  endif()
+  if(NOT EXISTS "${LCC_PROJECT_PRIVATE_KEY}")
+    message(WARNING "缺少私钥文件: ${LCC_PROJECT_PRIVATE_KEY}")
+  endif()
+
+  message(STATUS "密钥对不完整，需要生成")
 
   # 判断是否为顶层项目（单独编译）还是子项目
   if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
