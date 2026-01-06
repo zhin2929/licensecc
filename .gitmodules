@@ -1,5 +1,5 @@
 [submodule "license-generator"]
 	path = extern/license-generator
 	url = git@github.com:zhin2929/lcc-license-generator.git
-	branch = .
+	branch = boost-cpp17-fixes
 	ignore = all
