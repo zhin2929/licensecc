@@ -110,36 +110,40 @@ Write-Host ""
 $packages = @(
   # OpenSSL（主项目和子项目都需要）
   # Boost（license-generator 子项目需要）
-  # 动态版本（用于单独构建 licensecc）
-#  "openssl:x64-windows",
-#  "openssl:x86-windows",
-#  "boost-date-time:x64-windows",
-#  "boost-date-time:x86-windows",
-#  "boost-filesystem:x64-windows",
-#  "boost-filesystem:x86-windows",
-#  "boost-program-options:x64-windows",
-#  "boost-program-options:x86-windows",
-#  "boost-system:x64-windows",
-#  "boost-system:x86-windows",
-#  "boost-test:x64-windows",
-#  "boost-test:x86-windows",
 
-  # 静态版本（用于作为子项目集成，避免 DLL 依赖问题）
-  "openssl:x64-windows-static",
-  "openssl:x86-windows-static",
-  "boost-date-time:x64-windows-static",
-  "boost-date-time:x86-windows-static",
-  "boost-filesystem:x64-windows-static",
-  "boost-filesystem:x86-windows-static",
-  "boost-program-options:x64-windows-static",
-  "boost-program-options:x86-windows-static",
-  "boost-system:x64-windows-static",
-  "boost-system:x86-windows-static",
-  "boost-test:x64-windows-static",
-  "boost-test:x86-windows-static"
+  # 静态库+动态CRT 版本（推荐：用于作为子项目集成，避免 DLL 依赖问题，且与动态CRT项目兼容）
+  "openssl:x64-windows-static-md",
+  "openssl:x86-windows-static-md",
+  "boost-date-time:x64-windows-static-md",
+  "boost-date-time:x86-windows-static-md",
+  "boost-filesystem:x64-windows-static-md",
+  "boost-filesystem:x86-windows-static-md",
+  "boost-program-options:x64-windows-static-md",
+  "boost-program-options:x86-windows-static-md",
+  "boost-system:x64-windows-static-md",
+  "boost-system:x86-windows-static-md",
+  "boost-test:x64-windows-static-md",
+  "boost-test:x86-windows-static-md"
 )
 
-Write-Host "将要安装以下包:" -ForegroundColor Yellow
+# 旧的静态库+静态CRT包（保留以备后用，不自动卸载）
+# 注意：如果之前安装了这些包，它们会与新的 static-md 包共存
+# $oldPackages = @(
+#   "openssl:x64-windows-static",
+#   "openssl:x86-windows-static",
+#   "boost-date-time:x64-windows-static",
+#   "boost-date-time:x86-windows-static",
+#   "boost-filesystem:x64-windows-static",
+#   "boost-filesystem:x86-windows-static",
+#   "boost-program-options:x64-windows-static",
+#   "boost-program-options:x86-windows-static",
+#   "boost-system:x64-windows-static",
+#   "boost-system:x86-windows-static",
+#   "boost-test:x64-windows-static",
+#   "boost-test:x86-windows-static"
+# )
+
+Write-Host "将要安装以下包 (静态库+动态CRT):" -ForegroundColor Yellow
 foreach ($pkg in $packages) {
   Write-Host "  - $pkg" -ForegroundColor White
 }
